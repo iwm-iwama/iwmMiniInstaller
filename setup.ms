@@ -1,4 +1,4 @@
-VERSION = "20260429"
+VERSION = "20260508"
 //------------------------------------------------------------------------------
 //- ↓ 設定 ここから -----------------------------------------------------------
 
@@ -14,7 +14,7 @@ InstName = "setup-sample"
 // 2.1.表示名
 ShortcutName = "セットアップ・サンプル"
 
-// 2.2.[ショートカット名. 実行ファイル, アイコン]
+// 2.2.["ショートカット名", "実行ファイル", "アイコン"]
 //   注意：二次配列 [] 最後の "," は必須!!
 ShortcutItem = [
 	["01アプリケーション", "c:\windows\system32\notepad.exe", "c:\windows\system32\SHELL32.dll, 24"],
@@ -47,7 +47,9 @@ E2 = function(esc = "0m", text = "")
 end function
 
 CLEAR = function()
-	// print (ESC + "2J" + ESC + "H"), ""
+	// Unix
+	print exec("clear").output, ""
+	// Windows
 	exec("PowerShell -Command ""Clear-Host""")
 end function
 
@@ -59,13 +61,16 @@ P2 = function(text = "")
 	print text
 end function
 
+NOW = function(format = "yyyy-MM-dd HH:mm:ss")
+	return _dateStr(_dateVal, format)
+end function
+
 //-------------
 // 前処理開始
 //-------------
 CLEAR
 
-E1("97;44m", " セットアップ ")
-E2("34;47m", " " + ShortcutName + " ")
+E2("97;44m", " " + ShortcutName + " ")
 P2
 
 // ファイル存在チェック
@@ -98,16 +103,16 @@ if errorCnt > 0 then
 end if
 
 // 続行
-E2("93m", "1.インストール場所")
+E2("93m", "1.インストール・フォルダ")
 E2("37m", "    " + InstDir)
 P2
-E2("93m", "2.1.ショートカット場所")
+E2("93m", "2.1.ショートカット・フォルダ")
 E2("37m", "    " + ShortcutDir)
 P2
 E2("93m", "2.2.ショートカット・アイテム")
 E2("95m", "    ショートカット名")
 E2("96m", "    実行ファイル")
-E2("92m", "    アイコンファイル")
+E2("92m", "    アイコン")
 
 for i1 in ShortcutItem.indexes
 	P2
@@ -136,7 +141,7 @@ E1("93m", "インストールしますか? [Y/n] ")
 	inputStr = input
 	P2
 	if inputStr != "y" and inputStr != "Y" then
-		P2 "中止しました"
+		P2 "中止しました..."
 		exit
 	end if
 
@@ -184,8 +189,8 @@ end for
 //-------------------------------
 // アンインストールファイル作成
 //-------------------------------
-// 01.bat
-UnistallFn01 = "unistall-" + InstName + "_01.bat"
+// unistall-xxx_yyyyMMdd.bat
+UnistallFn01 = "unistall-" + InstName + "_" + NOW("yyyyMMdd") + ".bat"
 	UninstallBatch01 = [
 		"@echo off",
 		"echo [" + ShortcutName + "]",
@@ -195,13 +200,16 @@ UnistallFn01 = "unistall-" + InstName + "_01.bat"
 		"echo.",
 		"set /p input=""アンインストールしますか? [Y/n] """,
 		"if /i not ""%input%"" == ""Y"" (",
+		"  echo.",
 		"  echo 中止します...",
 		"  sleep 2",
 		"  exit /b",
 		")",
+		"echo.",
 		"echo アンインストール開始...",
 		"rmdir /S /Q """ + InstDir + """",
 		"rmdir /S /Q """ + ShortcutDir + """",
+		"sleep 2",
 		"echo 終了",
 		"sleep 2",
 		"del ""%~f0%""",
@@ -211,7 +219,7 @@ UnistallFn01 = "unistall-" + InstName + "_01.bat"
 
 	exec("PowerShell -Command ""Move-Item -Path " + UnistallFn01 + " " + InstDir + """ -Force")
 
-// 00.bat
+// unistall-xxx.bat
 UnistallFn00 = "unistall-" + InstName + ".bat"
 	UninstallBatch00 = [
 		"@echo off",
