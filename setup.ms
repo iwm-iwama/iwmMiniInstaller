@@ -1,4 +1,4 @@
-VERSION = "20260508"
+VERSION = "20260514"
 //------------------------------------------------------------------------------
 //- ↓ 設定 ここから -----------------------------------------------------------
 
@@ -31,8 +31,32 @@ InstDir      = env.LOCALAPPDATA + "\" + InstName
 ShortcutDir  = env.APPDATA + "\Microsoft\Windows\Start Menu\Programs\" + ShortcutName
 SetupFileDir = ".\setup-files"
 
-// 関数
+// 共通変数
+CR   = char(13)
+LF   = char(10)
+CRLF = CR + LF
+
 ESC = char(27) + "["
+
+// 関数
+DOS = function(cmd = "")
+	// 末尾プロンプトを非表示
+	rtn = exec("@echo off && " + cmd)
+		a1 = []
+		for s1 in rtn.output.split(LF)
+			// LF, CRを別々に消去
+			s1 = s1.replace(LF, "").replace(CR, "")
+			// 追加（空白行含む）
+			a1.push(s1)
+		end for
+		// 配列を返す
+		rtn.output = a1
+	return rtn
+end function
+
+PS5 = function(cmd = "")
+	return DOS("powershell.exe -Command """ + cmd + """")
+end function
 
 E1 = function(esc = "0m", text = "")
 	if text then
@@ -46,11 +70,9 @@ E2 = function(esc = "0m", text = "")
 	print
 end function
 
-CLEAR = function()
-	// Unix
-	print exec("clear").output, ""
+CLS = function()
 	// Windows
-	exec("PowerShell -Command ""Clear-Host""")
+	PS5("Clear-Host")
 end function
 
 P1 = function(text = "")
@@ -68,7 +90,7 @@ end function
 //-------------
 // 前処理開始
 //-------------
-CLEAR
+CLS
 
 E2("97;44m", " " + ShortcutName + " ")
 P2
@@ -149,9 +171,11 @@ P2 "インストール中..."
 
 // インストールフォルダへコピー
 file.makedir InstDir
-	src  = SetupFileDir + "\*"
-	dest = InstDir
-exec("PowerShell -Command ""Copy-Item -Path '" + src + "' -Destination '" + dest + "' -Recurse -Force""")
+
+src  = SetupFileDir + "\*"
+dest = InstDir
+
+PS5("Copy-Item -Path '" + src + "' -Destination '" + dest + "' -Recurse -Force")
 
 //---------------------
 // ショートカット作成
@@ -176,14 +200,14 @@ for i1 in ShortcutItem.indexes
 			end if
 		end if
 
-	psCommand = "" +
+	ps1 = "" +
 		"$s = New-Object -ComObject WScript.Shell; " +
 		"$lnk = $s.CreateShortcut('" + shortcutPath + "'); " +
 		"$lnk.TargetPath = '" + targetPath + "'; " +
 		"$lnk.IconLocation = '" + iconPath + "'; " +
 		"$lnk.Save()"
 
-	exec("PowerShell -Command """ + psCommand + """")
+	PS5(ps1)
 end for
 
 //-------------------------------
@@ -217,7 +241,7 @@ UnistallFn01 = "unistall-" + InstName + "_" + NOW("yyyyMMdd") + ".bat"
 
 	file.writeLines(UnistallFn01, UninstallBatch01)
 
-	exec("PowerShell -Command ""Move-Item -Path " + UnistallFn01 + " " + InstDir + """ -Force")
+	PS5("Move-Item -Path '" + UnistallFn01 + "' '" + InstDir + "' -Force")
 
 // unistall-xxx.bat
 UnistallFn00 = "unistall-" + InstName + ".bat"
@@ -231,17 +255,18 @@ UnistallFn00 = "unistall-" + InstName + ".bat"
 
 	file.writeLines(UnistallFn00, UninstallBatch00)
 
-	exec("PowerShell -Command ""Move-Item -Path " + UnistallFn00 + " " + InstDir + """ -Force")
+	PS5("Move-Item -Path '" + UnistallFn00 + "' '" + InstDir + "' -Force")
 
 	shortcutPath = ShortcutDir + "\99アンインストール.lnk"
-
 	targetPath = InstDir + "\" + UnistallFn00
-		psCommand = "" +
-			"$s = New-Object -ComObject WScript.Shell; " +
-			"$lnk = $s.CreateShortcut('" + shortcutPath + "'); " +
-			"$lnk.TargetPath = '" + targetPath + "'; " +
-			"$lnk.Save()"
-		exec("PowerShell -Command """ + psCommand + """")
+
+	ps1 = "" +
+		"$s = New-Object -ComObject WScript.Shell; " +
+		"$lnk = $s.CreateShortcut('" + shortcutPath + "'); " +
+		"$lnk.TargetPath = '" + targetPath + "'; " +
+		"$lnk.Save()"
+
+	PS5(ps1)
 
 //-------
 // 終了
